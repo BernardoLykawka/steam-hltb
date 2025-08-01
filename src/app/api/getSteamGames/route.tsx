@@ -5,10 +5,15 @@ export async function POST(req: NextRequest) {
     try {
         const { username } = await req.json();
 
-        const profileRes = await fetch(`https://steamcommunity.com/id/${username}`);
+        
+
+        const profileRes = await fetch(username);
         const html = await profileRes.text();
         const match = html.match(/"steamid":"(\d+)"/);
+        
         if (!match) return NextResponse.json({ error: "Steam ID not found" }, { status: 404 });
+
+
 
         const steamId = match[1];
         const apiKey = process.env.STEAM_API_KEY;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+
 type Props = {
     onSubmit: (username: string) => void;
 };
@@ -16,10 +17,12 @@ export default function NameBox({ onSubmit }: Props) {
     };
 
     return (
-        <section>
-            <form className="flex gap-4 mt-30" onSubmit={handleSubmit}>
+        <section className="mt-10 mb-5 text-center items-center">
+            
+            <form className="mt-5" onSubmit={handleSubmit}>
+
                 <input
-                    className="rounded-lg px-1 text-center bg-[#39455b] shadow-2xl py-1 text-[#a0b0c0] focus:outline-none focus:ring-2 focus:ring-[#3da9b8] focus:ring-opacity-50"
+                    className="rounded-lg px-1 text-center bg-[#39455b] shadow-2xl py-1 text-[#a0b0c0] focus:outline-none focus:ring-2 focus:ring-[#3da9b8] focus:ring-opacity-50 justify-center mr-2" 
                     type="text"
                     placeholder="Enter your Steam url id"
                     value={input}
@@ -31,11 +34,19 @@ export default function NameBox({ onSubmit }: Props) {
                 >
                     Submit
                 </button>
+                
             </form>
-            <div className="mt-3">
+            
+            <div className="text-[#e3e8f1]">
+                <div className="my-3">
+                    <a className="relative hover:cursor-pointer hover:text-[#3da9b8]" href="https://steamcommunity.com/id/boiccs" target="_blank"     rel="noopener   noreferrer ">
+                        https://steamcommunity.com/id/boiccs
+                    </a>
+                </div>
+                
                 <p>
-                    https://steamcommunity.com/id/<span className="text-[#3da9b8]">gaben</span>
-                </p>
+                    Verify if your Steam profile is <span className="mt-4 text-[#3da9b8]">public</span> and if the games are visible.
+                 </p>
             </div>
         </section>
     );
