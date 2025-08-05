@@ -1,9 +1,21 @@
 import { getIGDBToken } from "@/app/lib/igbd/getIgbdToken";
+import redis from "@/app/lib/igbd/redis";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const { gameName } = await req.json();
+
+    if (!gameName || typeof gameName !== 'string') {
+      return NextResponse.json({ error: "Nome do jogo é obrigatório" }, { status: 400 });
+    }
+
+    const cacheKey = `igdb_game_search:${gameName.toLowerCase().trim()}`;
+    
+    const cachedResult = await redis.get(cacheKey);
+    if (cachedResult) {
+      return NextResponse.json({ games: JSON.parse(cachedResult) });
+    }
 
     const token = await getIGDBToken();
 
@@ -13,14 +25,14 @@ export async function POST(req: NextRequest) {
       limit 1;
     `;
 
-      const response = await fetch("https://api.igdb.com/v4/games", {
+    const response = await fetch("https://api.igdb.com/v4/games", {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Client-ID": process.env.TWITCH_CLIENT_ID!,
         Authorization: `Bearer ${token}`,
       },
-        body: query,
+      body: query,
     });
 
     if (!response.ok) {
@@ -30,6 +42,9 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
+    
+    await redis.setex(cacheKey, 30600, JSON.stringify(data));
+    
     return NextResponse.json({ games: data });
   } catch (err: any) {
     console.error("Erro interno:", err);

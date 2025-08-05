@@ -7,8 +7,8 @@ export default function Header() {
 
             </div>
             <div className=" p-6 flex flex-col items-center">
-                <h1 className="text-4xl text-[#e3e8f1] font-bold tracking-tight mb-2">
-                Steam Time Optimizer
+                <h1 className="font-title text-4xl text-[#e3e8f1] font-bold tracking-tight mb-2">
+                STEAM TIME OPTIMIZER
             </h1>
             <p className="text-[#b0bed0] text-lg text-center">
                 Maximize your gaming experience and manage your playtime efficiently.

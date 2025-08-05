@@ -10,10 +10,12 @@ type Props = {
 export default function NameBox({ onSubmit }: Props) {
     const [input, setInput] = useState("");
 
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         console.log("Submitting username:", input);
         onSubmit(input);
+        
     };
 
     return (
@@ -22,7 +24,7 @@ export default function NameBox({ onSubmit }: Props) {
             <form className="mt-5" onSubmit={handleSubmit}>
 
                 <input
-                    className="rounded-lg px-1 text-center bg-[#39455b] shadow-2xl py-1 text-[#a0b0c0] focus:outline-none focus:ring-2 focus:ring-[#3da9b8] focus:ring-opacity-50 justify-center mr-2" 
+                    className="rounded-lg px-5 text-center bg-[#39455b] shadow-2xl py-1 text-[#a0b0c0] focus:outline-none focus:ring-2 focus:ring-[#3da9b8] focus:ring-opacity-50 justify-center mr-2" 
                     type="text"
                     placeholder="Enter your Steam url id"
                     value={input}
@@ -30,7 +32,7 @@ export default function NameBox({ onSubmit }: Props) {
                 />
                 <button
                     type="submit"
-                    className="rounded-lg bg-[#39455b] shadow-2xl p-1 text-[#a0b0c0] hover:cursor-pointer hover:bg-[#3da9b8]"
+                    className="rounded-lg bg-[#39455b] shadow-2xl py-1 px-3 text-[#a0b0c0] hover:cursor-pointer hover:bg-[#3da9b8]"
                 >
                     Submit
                 </button>

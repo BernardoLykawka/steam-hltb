@@ -19,16 +19,28 @@ type IGDBGame = {
   total_rating: number;
   first_release_date: string;
 };
+function cleanGameName(name: string): string {
+  let cleaned = name.replace(/\(\d{4}\)/g, '');
+  cleaned = cleaned.replace(/[^a-zA-Z0-9\s]/g, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  return cleaned;
+}
 
 export default function GameList({ username }: Props) {
   const [games, setGames] = useState<(SteamGame & { igdb?: IGDBGame | null })[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     if (!username) return;
 
     async function loadGames() {
       try {
+        setLoading(true);
+        setError(null);
+        setGames([]);
+
         const res = await fetch("/api/getSteamGames", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -39,15 +51,29 @@ export default function GameList({ username }: Props) {
         if (!res.ok) throw new Error(data.error || "Unknown error");
 
         const steamGames: SteamGame[] = data.games || [];
+        
+        if (steamGames.length === 0) {
+          setLoading(false);
+          return;
+        }
 
+        const initialGames = steamGames.map(game => ({ ...game, igdb: null }));
+        setGames(initialGames);
+        setLoadingProgress({ current: 0, total: steamGames.length });
 
-        const IgbdGames = await Promise.all(
-          steamGames.map(async (game) => {
+        const batchSize = 15;
+        const processedGames = [...initialGames];
+
+        for (let i = 0; i < steamGames.length; i += batchSize) {
+          const batch = steamGames.slice(i, i + batchSize);
+          
+          const batchPromises = batch.map(async (game, index) => {
             try {
+              const cleanedGameName = cleanGameName(game.name);
               const res = await fetch("/api/getIgdbGames", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gameName: game.name }),
+                body: JSON.stringify({ gameName: cleanedGameName }),
               });
 
               const data = await res.json();
@@ -55,14 +81,28 @@ export default function GameList({ username }: Props) {
             } catch {
               return { ...game, igdb: null };
             }
-          })
-        );
+          });
 
-        setGames(IgbdGames);
-        setError(null);
+          const batchResults = await Promise.all(batchPromises);
+          
+          for (let j = 0; j < batchResults.length; j++) {
+            processedGames[i + j] = batchResults[j];
+          }
+          
+          setGames([...processedGames]);
+          setLoadingProgress({ current: Math.min(i + batchSize, steamGames.length), total: steamGames.length });
+          
+  
+          if (i + batchSize < steamGames.length) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+        }
+
+        setLoading(false);
       } catch (err: any) {
         setError(err.message);
         setGames([]);
+        setLoading(false);
       }
     }
 
@@ -74,14 +114,38 @@ export default function GameList({ username }: Props) {
   return (
     <div className="mt-8 mx-15">
       <div>
-        <p className="text-[#e3e8f1] mb-5">
-          Found {games.length} games for user <strong className="text-[#3da9b8]">{username}</strong>
+        <p className="text-[#e3e8f1] mb-5  bg-[#39455b] rounded-xl p-2">
+          Found {games.length} games for user <span className="text-[#3da9b8]">{username}</span>
         </p>
       </div>
+      
+      {loading && (
+        <div className="mb-6 p-4 bg-[#39455b] rounded-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#3da9b8]"></div>
+            <span className="text-[#e3e8f1]">
+              Loading game data...
+            </span>
+          </div>
+          {loadingProgress.total > 0 && (
+            <div><div className="w-full bg-[#2a3441] rounded-full h-2">
+              <div
+                className="bg-[#3da9b8] h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
+              ></div>
+            </div><p className="text-[#a0b0c0] text-sm mt-1">
+                {loadingProgress.current} of {loadingProgress.total} processed games
+              </p>
+          </div>
+          )}
+        </div>
+      )}
+      
       {error && <p className="text-[#ff9f1c]">{error}</p>}
-      {!error && games.length === 0 && (
+      {!error && !loading && games.length === 0 && (
         <p className="text-[#e3e8f1]">No games found or profile is private.</p>
       )}
+      
       <ul className="space-y-6">
         {games.map((game) => (
           <li
@@ -115,17 +179,28 @@ export default function GameList({ username }: Props) {
               </p>
 
               {game.igdb && (
-                <div className=" mt-2 space-y-1 text-[#a0b0c0]">
-                  <p><strong className="text-[#e3e8f1]">Summary:</strong> {game.igdb.summary || "No description"}</p>
-                  <p><strong className="text-[#e3e8f1]">Total Rating:</strong> {game.igdb.total_rating?.toFixed(1) || "N/A"}</p>
+                <div className="mt-2 space-y-1 text-[#a0b0c0]">
+                  <p><span className="text-[#e3e8f1]">Summary:</span> {game.igdb.summary || "No description"}</p>
+                  <p><span className="text-[#e3e8f1]">Total Rating:</span> {game.igdb.total_rating?.toFixed(1) || "N/A"}</p>
                   <p>
-                    <strong className="text-[#e3e8f1]">Release Date:</strong>{" "}
+                    <span className="text-[#e3e8f1]">Release Date:</span>{" "}
                     {game.igdb.first_release_date
                       ? new Date(Number(game.igdb.first_release_date) * 1000).toLocaleDateString()
                       : "N/A"}
                   </p>
                 </div>
               )}
+              {!game.igdb && loading && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#3da9b8]"></div>
+                  <span className="text-[#a0b0c0] text-sm">Loading IGDB data...</span>
+                </div>
+              )}
+              {!game.igdb && !loading && !error &&(
+              <div className="mt-2 flex items-center gap-2 ">
+                <p className="text-[#3da9b8]">No IGBD data found!</p>
+              </div>
+            )}
             </div>
           </li>
         ))}
