@@ -23,12 +23,6 @@ type IGDBGame = {
 type SortOption = "name" | "playtime" | "rating" | "releaseDate" | "lastPlayed";
 type SortDirection = "asc" | "desc";
 
-function cleanGameName(name: string): string {
-  let cleaned = name.replace(/\(\d{4}\)/g, '');
-  cleaned = cleaned.replace(/[^a-zA-Z0-9\s]/g, '');
-  cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  return cleaned;
-}
 
 export default function GameList({ username }: Props) {
   const [games, setGames] = useState<(SteamGame & { igdb?: IGDBGame | null })[]>([]);
@@ -37,6 +31,7 @@ export default function GameList({ username }: Props) {
   const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
   const [sortOption, setSortOption] = useState<SortOption>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (!username) return;
@@ -75,11 +70,10 @@ export default function GameList({ username }: Props) {
           
           const batchPromises = batch.map(async (game, index) => {
             try {
-              const cleanedGameName = cleanGameName(game.name);
               const res = await fetch("/api/getIgdbGames", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gameName: cleanedGameName }),
+                body: JSON.stringify({ gameName: game.name }),
               });
 
               const data = await res.json();
@@ -116,8 +110,12 @@ export default function GameList({ username }: Props) {
   }, [username]);
 
   if (!username) return null;
+const normalize = (str: string) =>
+  str.toLowerCase().replace(/[\u2122\u00AE\u00A9]/g, "").replace(/\s+/g, " ").trim();
 
- const sortedGames = [...games].sort((a, b) => {
+ const filteredGames = games.filter(game => normalize(game.name).includes(normalize(searchTerm)));
+
+const sortedGames = [...filteredGames].sort((a, b) => {
   let comparison = 0;
 
   switch (sortOption) {
@@ -177,30 +175,39 @@ export default function GameList({ username }: Props) {
         <p className="text-[#e3e8f1]">No games found or profile is private.</p>
       )}
       
-      <div className="mb-6 flex items-center gap-4">
-  <label className="text-[#e3e8f1]">Sort by:</label>
-  <select
-    className="bg-[#2a3441] text-[#e3e8f1] border border-[#3da9b8] rounded px-3 py-1"
-    value={sortOption}
-    onChange={(e) => setSortOption(e.target.value as SortOption)}
-  >
-    <option value="name">Name</option>
-    <option value="playtime">Playtime</option>
-    <option value="rating">Rating</option>
-    <option value="releaseDate">Release Date</option>
-    <option value="lastPlayed">Last Played</option>
-  </select>
+<div className="mb-6 flex items-center gap-4 flex-wrap">
+  <div className="flex items-center gap-2">
+    <label className="text-[#e3e8f1]">Sort by:</label>
+      <select
+        className="bg-[#2a3441] text-[#e3e8f1] border border-[#3da9b8] rounded px-3 py-1"
+        value={sortOption}
+        onChange={(e) => setSortOption(e.target.value as SortOption)}
+      >
+        <option value="name">Name</option>
+        <option value="playtime">Playtime</option>
+        <option value="rating">Rating</option>
+        <option value="releaseDate">Release Date</option>
+        <option value="lastPlayed">Last Played</option>
+      </select>
 
-  <button
-    className="text-[#3da9b8] hover:text-white px-2 py-1 border border-[#3da9b8] rounded"
-    onClick={() =>
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
-    }
-  >
-    {sortDirection === "asc" ? "↑ Asc" : "↓ Desc"}
-  </button>
-</div>
+      <button
+        className="text-[#3da9b8] hover:text-white px-2 py-1 border border-[#3da9b8] rounded"
+        onClick={() =>
+          setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+        }
+      >
+        {sortDirection === "asc" ? "↑ Asc" : "↓ Desc"}
+      </button>
+    </div>
 
+    <input
+      type="text"
+      placeholder="Search game name..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="bg-[#2a3441] text-[#e3e8f1] border border-[#3da9b8] rounded px-3 py-1 mt-2 sm:mt-0"
+    />
+  </div>
       <ul className="space-y-6">
         {sortedGames.map((game) => (
           <li

@@ -6,12 +6,20 @@ export async function POST(req: NextRequest) {
   try {
     const { gameName } = await req.json();
 
-    if (!gameName || typeof gameName !== 'string') {
+    if (!gameName || typeof gameName !== "string") {
       return NextResponse.json({ error: "Nome do jogo é obrigatório" }, { status: 400 });
     }
 
-    const cacheKey = `igdb_game_search:${gameName.toLowerCase().trim()}`;
-    
+    const normalize = (str: string) =>
+      str
+        .toLowerCase()
+        .replace(/[\u2122\u00AE\u00A9]/g, "") // Remove ™ ® ©
+        .replace(/\s+/g, " ") // extras spaces
+        .trim();
+
+    const normalizedName = normalize(gameName);
+    const cacheKey = `igdb_game_search:${normalizedName}`;
+
     const cachedResult = await redis.get(cacheKey);
     if (cachedResult) {
       return NextResponse.json({ games: JSON.parse(cachedResult) });
@@ -20,9 +28,9 @@ export async function POST(req: NextRequest) {
     const token = await getIGDBToken();
 
     const query = `
-      fields name, summary, total_rating, first_release_date;
-      search "${gameName}";
-      limit 1;
+      fields name, summary, total_rating, first_release_date, parent_game.name;
+      search "${normalizedName}";
+      limit 5;
     `;
 
     const response = await fetch("https://api.igdb.com/v4/games", {
@@ -42,10 +50,17 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    
-    await redis.setex(cacheKey, 30600, JSON.stringify(data));
-    
-    return NextResponse.json({ games: data });
+
+    const bestMatch = 
+      data.find((game: any) => normalize(game.name) === normalizedName) ||
+      data.find((game: any) =>
+      (game.parent_name || []).some(
+      (alt: any) => normalize(alt.name) === normalizedName)) || data[0];
+      
+
+    await redis.setex(cacheKey, 30600, JSON.stringify([bestMatch]));
+
+    return NextResponse.json({ games: [bestMatch] });
   } catch (err: any) {
     console.error("Erro interno:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
