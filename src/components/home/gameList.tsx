@@ -217,10 +217,9 @@ const sortedGames = [...filteredGames].sort((a, b) => {
             <img
               src={`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appid}/header.jpg`}
               alt={game.name}
-              width={200}
-              height={100}
-              className="rounded-lg shadow-lg"
+              className="rounded-lg shadow-lg w-32 sm:w-40 md:w-48 lg:w-[200px]"
             />
+
 
             <div className="flex flex-col gap-1">
               <a
@@ -242,7 +241,9 @@ const sortedGames = [...filteredGames].sort((a, b) => {
 
               {game.igdb && (
                 <div className="mt-2 space-y-1 text-[#a0b0c0]">
-                  <p><span className="text-[#e3e8f1]">Summary:</span> {game.igdb.summary || "No description"}</p>
+                  <p className="hidden lg:block">
+                    <span className="text-[#e3e8f1]">Summary:</span> {game.igdb.summary || "No description"}
+                  </p>
                   <p><span className="text-[#e3e8f1]">Total Rating:</span> {game.igdb.total_rating?.toFixed(1) || "N/A"}</p>
                   <p>
                     <span className="text-[#e3e8f1]">Release Date:</span>{" "}
