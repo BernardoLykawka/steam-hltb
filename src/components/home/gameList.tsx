@@ -19,6 +19,10 @@ type IGDBGame = {
   total_rating: number;
   first_release_date: string;
 };
+
+type SortOption = "name" | "playtime" | "rating" | "releaseDate" | "lastPlayed";
+type SortDirection = "asc" | "desc";
+
 function cleanGameName(name: string): string {
   let cleaned = name.replace(/\(\d{4}\)/g, '');
   cleaned = cleaned.replace(/[^a-zA-Z0-9\s]/g, '');
@@ -31,6 +35,8 @@ export default function GameList({ username }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
+  const [sortOption, setSortOption] = useState<SortOption>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   useEffect(() => {
     if (!username) return;
@@ -111,6 +117,31 @@ export default function GameList({ username }: Props) {
 
   if (!username) return null;
 
+ const sortedGames = [...games].sort((a, b) => {
+  let comparison = 0;
+
+  switch (sortOption) {
+    case "name":
+      comparison = a.name.localeCompare(b.name);
+      break;
+    case "playtime":
+      comparison = a.playtime_forever - b.playtime_forever;
+      break;
+    case "rating":
+      comparison = (a.igdb?.total_rating || 0) - (b.igdb?.total_rating || 0);
+      break;
+    case "releaseDate":
+      comparison = (Number(a.igdb?.first_release_date) || 0) - (Number(b.igdb?.first_release_date) || 0);
+      break;
+    case "lastPlayed":
+      comparison = (a.rtime_last_played || 0) - (b.rtime_last_played || 0);
+      break;
+  }
+
+  return sortDirection === "asc" ? comparison : -comparison;
+});
+
+
   return (
     <div className="mt-8 mx-15">
       <div>
@@ -146,8 +177,32 @@ export default function GameList({ username }: Props) {
         <p className="text-[#e3e8f1]">No games found or profile is private.</p>
       )}
       
+      <div className="mb-6 flex items-center gap-4">
+  <label className="text-[#e3e8f1]">Sort by:</label>
+  <select
+    className="bg-[#2a3441] text-[#e3e8f1] border border-[#3da9b8] rounded px-3 py-1"
+    value={sortOption}
+    onChange={(e) => setSortOption(e.target.value as SortOption)}
+  >
+    <option value="name">Name</option>
+    <option value="playtime">Playtime</option>
+    <option value="rating">Rating</option>
+    <option value="releaseDate">Release Date</option>
+    <option value="lastPlayed">Last Played</option>
+  </select>
+
+  <button
+    className="text-[#3da9b8] hover:text-white px-2 py-1 border border-[#3da9b8] rounded"
+    onClick={() =>
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+    }
+  >
+    {sortDirection === "asc" ? "↑ Asc" : "↓ Desc"}
+  </button>
+</div>
+
       <ul className="space-y-6">
-        {games.map((game) => (
+        {sortedGames.map((game) => (
           <li
             key={game.appid}
             className="text-[#a0b0c0] border-b pb-4 flex gap-5 items-start"
